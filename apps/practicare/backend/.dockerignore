@@ -1,0 +1,9 @@
+# Secrets are provided at runtime (volume mount / environment), never baked into the image
+.env
+.env.*
+# Local artifacts
+__pycache__/
+*.pyc
+*.db
+*.zip
+scratch_*.py

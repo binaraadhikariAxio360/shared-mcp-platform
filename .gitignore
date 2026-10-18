@@ -1,0 +1,190 @@
+# ==============================================================================
+# Shared MCP MOC - Root Gitignore
+# Multi-app monorepo: Next.js 16 (Turbopack) + Python 3.12 (FastAPI) + Docker
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# Environment Variables & Secrets
+# ------------------------------------------------------------------------------
+.env
+.env.*
+.env*.local
+.env.development
+.env.test
+.env.production
+# Do not ignore example environment templates (variable names only, never values)
+!.env.example
+!**/.env.example
+
+# Private keys, certificates & keystores (e.g. MCP assertion signing keys)
+*.pem
+*.key
+*.p8
+*.p12
+*.pfx
+*.jks
+*.keystore
+*.jwk
+id_rsa
+id_dsa
+id_ecdsa
+id_ed25519
+secrets/
+.secrets/
+
+# Credential files & package-registry tokens
+credentials*.json
+*service-account*.json
+*service_account*.json
+client_secret*.json
+.npmrc
+.pypirc
+.netrc
+.htpasswd
+
+# ------------------------------------------------------------------------------
+# Python & Virtual Environments
+# ------------------------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+# Packaging output: anchored to the repository root so real source folders named
+# lib/, build/, var/ ... inside apps or platform code are never ignored by accident
+/build/
+develop-eggs/
+dist/
+/downloads/
+/eggs/
+.eggs/
+/lib/
+/lib64/
+/parts/
+/sdist/
+/var/
+/wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environments
+.venv/
+venv/
+/ENV/
+/env/
+env.bak/
+venv.bak/
+
+# Testing & Coverage
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+
+# ------------------------------------------------------------------------------
+# Node.js & Next.js (All apps: PractiCare, TaxSnap, PropSights, OnScribe)
+# ------------------------------------------------------------------------------
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Next.js build output
+.next/
+out/
+.turbo/
+
+# TypeScript build info
+*.tsbuildinfo
+next-env.d.ts
+
+# Yarn & pnp
+.pnp
+.pnp.js
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# ------------------------------------------------------------------------------
+# Databases, Local Storage & Archives
+# ------------------------------------------------------------------------------
+*.db
+*.sqlite
+*.sqlite3
+pgdata/
+
+# Database dumps & backup files (versioned schema migrations stay tracked)
+*.sql
+!**/migrations/*.sql
+*.sql.gz
+*.sql.bak
+*.dump
+*.bak
+*.bundle
+
+# Large compressed archives
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+*.rar
+*.7z
+
+# ------------------------------------------------------------------------------
+# Operating System & Editor Files
+# ------------------------------------------------------------------------------
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+desktop.ini
+$RECYCLE.BIN/
+
+# Linux
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+
+# IDEs & Editors
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+.idea/
+*.sublime-project
+*.sublime-workspace
+*.swp
+*.swo
+*.swn
+
+# ------------------------------------------------------------------------------
+# Logs & Temporary Files
+# ------------------------------------------------------------------------------
+logs/
+*.log
+scratch/
+tmp/
+temp/

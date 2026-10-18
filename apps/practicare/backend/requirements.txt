@@ -1,0 +1,10 @@
+fastapi==0.143.0
+uvicorn[standard]==0.54.0
+pydantic==2.14.0
+sqlalchemy==2.1.4
+psycopg2-binary==2.9.13
+python-dotenv==1.2.4
+# AI agent runtime (versions verified together in the local .venv)
+langgraph==1.2.15
+langchain-core==1.6.11
+langchain-google-genai==4.4.2

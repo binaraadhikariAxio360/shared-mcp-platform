@@ -1,0 +1,178 @@
+services:
+  # =============================================================================
+  # Database Infrastructure (PostgreSQL 16) - Port 5432
+  # =============================================================================
+  postgres-db:
+    image: postgres:16-alpine
+    container_name: moc-postgres-db
+    restart: always
+    environment:
+      POSTGRES_USER: practicare_user
+      POSTGRES_PASSWORD: practicare_secure_pass
+      POSTGRES_DB: practicare_db
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U practicare_user -d practicare_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # =============================================================================
+  # Frontends (Next.js) - Ports 3001-3004
+  # =============================================================================
+
+  # 1. PractiCare Frontend -> http://localhost:3001
+  practicare-ui:
+    build:
+      context: ./apps/practicare/frontend
+      dockerfile: Dockerfile
+    container_name: moc-practicare-ui
+    ports:
+      - "3001:3001"
+    environment:
+      - PORT=3001
+      - WATCHPACK_POLLING=true
+      - NEXT_PUBLIC_BACKEND_URL=http://localhost:5001
+    volumes:
+      - ./apps/practicare/frontend:/app
+      - /app/node_modules
+      - /app/.next
+
+  # 2. TaxSnap Frontend -> http://localhost:3002
+  taxsnap-ui:
+    build:
+      context: ./apps/taxsnap/frontend
+      dockerfile: Dockerfile
+    container_name: moc-taxsnap-ui
+    ports:
+      - "3002:3002"
+    environment:
+      - PORT=3002
+      - WATCHPACK_POLLING=true
+      - NEXT_PUBLIC_BACKEND_URL=http://localhost:5002
+    volumes:
+      - ./apps/taxsnap/frontend:/app
+      - /app/node_modules
+      - /app/.next
+
+  # 3. PropSights Frontend -> http://localhost:3003
+  propsights-ui:
+    build:
+      context: ./apps/propsights/frontend
+      dockerfile: Dockerfile
+    container_name: moc-propsights-ui
+    ports:
+      - "3003:3003"
+    environment:
+      - PORT=3003
+      - WATCHPACK_POLLING=true
+      - NEXT_PUBLIC_BACKEND_URL=http://localhost:5003
+    volumes:
+      - ./apps/propsights/frontend:/app
+      - /app/node_modules
+      - /app/.next
+
+  # 4. OnScribe Frontend -> http://localhost:3004
+  onscribe-ui:
+    build:
+      context: ./apps/onscribe/frontend
+      dockerfile: Dockerfile
+    container_name: moc-onscribe-ui
+    ports:
+      - "3004:3004"
+    environment:
+      - PORT=3004
+      - WATCHPACK_POLLING=true
+      - NEXT_PUBLIC_BACKEND_URL=http://localhost:5004
+    volumes:
+      - ./apps/onscribe/frontend:/app
+      - /app/node_modules
+      - /app/.next
+
+  # =============================================================================
+  # Backends (FastAPI) - Ports 5001-5004
+  # =============================================================================
+
+  # 1. PractiCare Backend -> http://localhost:5001
+  practicare-backend:
+    build:
+      context: ./apps/practicare/backend
+      dockerfile: Dockerfile
+    container_name: moc-practicare-backend
+    depends_on:
+      postgres-db:
+        condition: service_healthy
+    ports:
+      - "5001:8000"
+    environment:
+      - PORT=8000
+      - ENVIRONMENT=development
+      - APP_NAME=practicare-backend
+      - DATABASE_URL=postgresql+psycopg2://practicare_user:practicare_secure_pass@postgres-db:5432/practicare_db
+      - SESSION_SECRET_KEY=practicare-dev-session-secret-key-32chars-min-length-fixed-token
+    volumes:
+
+      - ./apps/practicare/backend:/app
+
+  # 2. TaxSnap Backend -> http://localhost:5002
+  taxsnap-backend:
+    build:
+      context: ./apps/taxsnap/backend
+      dockerfile: Dockerfile
+    container_name: moc-taxsnap-backend
+    depends_on:
+      postgres-db:
+        condition: service_healthy
+    ports:
+      - "5002:8000"
+    environment:
+      - PORT=8000
+      - ENVIRONMENT=development
+      - APP_NAME=taxsnap-backend
+      - DATABASE_URL=postgresql+psycopg2://practicare_user:practicare_secure_pass@postgres-db:5432/practicare_db
+    volumes:
+      - ./apps/taxsnap/backend:/app
+
+  # 3. PropSights Backend -> http://localhost:5003
+  propsights-backend:
+    build:
+      context: ./apps/propsights/backend
+      dockerfile: Dockerfile
+    container_name: moc-propsights-backend
+    depends_on:
+      postgres-db:
+        condition: service_healthy
+    ports:
+      - "5003:8000"
+    environment:
+      - PORT=8000
+      - ENVIRONMENT=development
+      - APP_NAME=propsights-backend
+      - DATABASE_URL=postgresql+psycopg2://practicare_user:practicare_secure_pass@postgres-db:5432/practicare_db
+    volumes:
+      - ./apps/propsights/backend:/app
+
+  # 4. OnScribe Backend -> http://localhost:5004
+  onscribe-backend:
+    build:
+      context: ./apps/onscribe/backend
+      dockerfile: Dockerfile
+    container_name: moc-onscribe-backend
+    depends_on:
+      postgres-db:
+        condition: service_healthy
+    ports:
+      - "5004:8000"
+    environment:
+      - PORT=8000
+      - ENVIRONMENT=development
+      - APP_NAME=onscribe-backend
+      - DATABASE_URL=postgresql+psycopg2://practicare_user:practicare_secure_pass@postgres-db:5432/practicare_db
+    volumes:
+      - ./apps/onscribe/backend:/app
+
+volumes:
+  pgdata:

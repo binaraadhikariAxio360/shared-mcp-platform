@@ -1,0 +1,26 @@
+# Consistent line endings for all platforms: text files are stored and checked out with LF
+# (the code base, Docker images and tests all assume LF; Windows tools handle LF fine).
+* text=auto eol=lf
+
+# Windows-only scripts that require CRLF
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Binary files: never normalize or diff as text
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.pdf binary
+*.docx binary
+*.xlsx binary
+*.pptx binary
+*.zip binary
+*.gz binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.db binary
+*.sqlite binary

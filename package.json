@@ -1,0 +1,11 @@
+{
+  "name": "shared-mcp-moc",
+  "private": true,
+  "scripts": {
+    "dev:practicare": "npm --prefix apps/practicare/frontend run dev",
+    "dev:taxsnap": "npm --prefix apps/taxsnap/frontend run dev",
+    "dev:propsights": "npm --prefix apps/propsights/frontend run dev",
+    "dev:onscribe": "npm --prefix apps/onscribe/frontend run dev",
+    "dev:all-frontends": "concurrently -n \"PRACTICARE,TAXSNAP,PROPSIGHTS,ONSCRIBE\" -c \"blue,green,magenta,yellow\" \"npm run dev:practicare\" \"npm run dev:taxsnap\" \"npm run dev:propsights\" \"npm run dev:onscribe\""
+  }
+}
