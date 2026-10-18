@@ -1,8 +1,11 @@
 # Shared MCP Server runtime dependencies (exact pins, verified 2026-10-18 on Python 3.12.10).
 # mcp 2.3.0 pulls in starlette, sse-starlette, httpx2, pydantic, jsonschema, pyjwt[crypto], anyio.
+# PyJWT + cryptography are used directly by Step 3 auth (Ed25519 assertions), so they are pinned explicitly.
 mcp==2.3.0
 mcp-types==2.3.0
 uvicorn==0.54.0
 starlette==1.8.0
 httpx2==2.13.1
 jsonschema==4.26.0
+PyJWT==2.15.1
+cryptography==50.0.2

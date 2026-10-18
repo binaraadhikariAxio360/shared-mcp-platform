@@ -3,8 +3,20 @@ from __future__ import annotations
 import unittest
 from dataclasses import replace
 
+from datetime import datetime, timedelta, timezone
+
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+from cryptography.hazmat.primitives.asymmetric.x25519 import X25519PrivateKey
+
 from shared_mcp_server.adapters.base import AdapterError, AppAdapter, CallContext
-from shared_mcp_server.registry import AppRegistration, RegistryError, ToolManifest, build_registry
+from shared_mcp_server.registry import (
+    AppRegistration,
+    AssertionKey,
+    RegistryError,
+    ServiceCredential,
+    ToolManifest,
+    build_registry,
+)
 
 PRACTICARE = AppRegistration(app_id="practicare", display_name="PractiCare")
 TAXSNAP = AppRegistration(app_id="taxsnap", display_name="TaxSnap")
@@ -86,10 +98,70 @@ class RegistryTests(unittest.TestCase):
             build_registry([PRACTICARE], [tool(output_schema={"type": "string"})])
 
     def test_identity_arguments_refused(self) -> None:
-        for field in ("tenant_id", "user_id", "role", "user_role", "permissions"):
-            schema = {"type": "object", "properties": {field: {"type": "string"}}}
+        fields = ("tenant_id", "user_id", "role", "user_role", "permissions", "tenantId", "TENANT-ID", "tid", "sub", "UserId")
+        for field in fields:
+            schema = {"type": "object", "properties": {field: {"type": "string"}}, "additionalProperties": False}
             with self.subTest(field=field), self.assertRaisesRegex(RegistryError, "identity"):
                 build_registry([PRACTICARE], [tool(input_schema=schema)])
+
+    def test_input_schema_must_forbid_additional_properties(self) -> None:
+        for schema in (
+            {"type": "object"},
+            {"type": "object", "additionalProperties": True},
+            {"type": "object", "additionalProperties": {}},
+        ):
+            with self.subTest(schema=schema), self.assertRaisesRegex(RegistryError, "additionalProperties"):
+                build_registry([PRACTICARE], [tool(input_schema=schema)])
+
+    def test_clinical_auditor_cannot_be_granted_tools(self) -> None:
+        with self.assertRaisesRegex(RegistryError, "excluded roles"):
+            build_registry([PRACTICARE], [tool(allowed_roles=frozenset({"CLINIC_OWNER", "CLINICAL_AUDITOR"}))])
+
+
+def credential(**overrides) -> ServiceCredential:
+    values = {"token_id": "pc-svc-1", "sha256": "a" * 64, "not_after": datetime.now(timezone.utc) + timedelta(days=30)}
+    values.update(overrides)
+    return ServiceCredential(**values)
+
+
+def app_with(tokens=(), keys=(), app_id="practicare") -> AppRegistration:
+    return AppRegistration(app_id=app_id, display_name="X", client_tokens=tuple(tokens), assertion_keys=tuple(keys))
+
+
+class AppCredentialRegistryTests(unittest.TestCase):
+    def test_valid_credentials(self) -> None:
+        key = AssertionKey(kid="pc-key-1", public_key=Ed25519PrivateKey.generate().public_key())
+        registry = build_registry([app_with([credential(), credential(token_id="pc-svc-2", sha256="b" * 64)], [key])])
+        self.assertEqual(len(registry.apps["practicare"].client_tokens), 2)
+        self.assertNotIn("public_key", repr(key))
+
+    def test_invalid_token_entries(self) -> None:
+        cases = [
+            [credential(sha256="A" * 64)],
+            [credential(sha256="abc")],
+            [credential(token_id="bad id")],
+            [credential(), credential()],
+            [credential(not_after=datetime.now() + timedelta(days=1))],
+            [credential(not_before=datetime.now(timezone.utc) + timedelta(days=40))],
+        ]
+        for tokens in cases:
+            with self.subTest(tokens=tokens), self.assertRaises(RegistryError):
+                build_registry([app_with(tokens)])
+
+    def test_same_token_hash_for_two_apps_refused(self) -> None:
+        with self.assertRaisesRegex(RegistryError, "registered twice"):
+            build_registry([app_with([credential()]), app_with([credential(token_id="ts-1")], app_id="taxsnap")])
+
+    def test_invalid_keys(self) -> None:
+        good = Ed25519PrivateKey.generate().public_key()
+        cases = [
+            [AssertionKey(kid="k1", public_key=good), AssertionKey(kid="k1", public_key=good)],
+            [AssertionKey(kid="", public_key=good)],
+            [AssertionKey(kid="k1", public_key=X25519PrivateKey.generate().public_key())],  # type: ignore[arg-type]
+        ]
+        for keys in cases:
+            with self.subTest(keys=keys), self.assertRaises(RegistryError):
+                build_registry([app_with(keys=keys)])
 
 
 class AdapterInterfaceTests(unittest.IsolatedAsyncioTestCase):
@@ -104,11 +176,20 @@ class AdapterInterfaceTests(unittest.IsolatedAsyncioTestCase):
             async def call_tool(self, arguments, context):
                 return {"tool": context.tool_name, "cid": context.correlation_id, **arguments}
 
-        context = CallContext(correlation_id="cid-1", app_id="practicare", tool_name="practicare_list_tasks")
+        context = CallContext(
+            correlation_id="cid-1",
+            app_id="practicare",
+            tool_name="practicare_list_tasks",
+            user_id="usr-1",
+            tenant_id="tenant-001",
+            role="NURSE_STAFF",
+            assertion="header.payload.signature",
+        )
         self.assertEqual(
             await EchoAdapter().call_tool({"limit": 1}, context),
             {"tool": "practicare_list_tasks", "cid": "cid-1", "limit": 1},
         )
+        self.assertNotIn("header.payload.signature", repr(context))
 
     def test_adapter_error_codes(self) -> None:
         error = AdapterError("TIMEOUT", "backend did not answer in 8s")

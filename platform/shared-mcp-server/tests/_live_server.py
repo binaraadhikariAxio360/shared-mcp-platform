@@ -4,21 +4,33 @@ from __future__ import annotations
 
 import threading
 import time
+from collections.abc import Iterable
 
 import uvicorn
 
+from shared_mcp_server.adapters.base import AppAdapter
 from shared_mcp_server.config import Settings
+from shared_mcp_server.registry import Registry
 from shared_mcp_server.server import build_app
 
 
 class LiveServer:
-    def __init__(self, settings: Settings | None = None) -> None:
+    def __init__(
+        self,
+        settings: Settings | None = None,
+        registry: Registry | None = None,
+        adapters: Iterable[AppAdapter] = (),
+    ) -> None:
         self.settings = settings or Settings(port=0)
-        self.app = build_app(self.settings)
+        self.app = build_app(self.settings, registry, adapters)
         config = uvicorn.Config(self.app, host="127.0.0.1", port=0, log_level="warning", lifespan="on")
         self._server = uvicorn.Server(config)
         self._thread = threading.Thread(target=self._server.run, daemon=True)
         self.base_url = ""
+
+    @property
+    def mcp_url(self) -> str:
+        return self.base_url + self.settings.mcp_path
 
     def __enter__(self) -> "LiveServer":
         self._thread.start()

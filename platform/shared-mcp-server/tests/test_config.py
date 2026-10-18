@@ -14,6 +14,38 @@ class ConfigTests(unittest.TestCase):
         self.assertEqual(settings.protocol_version, "2025-11-25")
         self.assertEqual(settings.mcp_path, "/mcp")
         self.assertEqual(settings.max_request_body_bytes, 262144)
+        self.assertIsNone(settings.apps_file)
+        self.assertEqual(settings.assertion_audience, "shared-mcp-server")
+        self.assertEqual((settings.assertion_max_lifetime_seconds, settings.clock_skew_seconds), (60, 5))
+        self.assertEqual(settings.replay_cache_max_entries, 50000)
+
+    def test_security_overrides(self) -> None:
+        settings = load_settings(
+            {
+                "MCP_APPS_FILE": " secrets/apps.json ",
+                "MCP_ASSERTION_AUDIENCE": "shared-mcp-dev",
+                "MCP_ASSERTION_MAX_LIFETIME_SECONDS": "30",
+                "MCP_CLOCK_SKEW_SECONDS": "2",
+                "MCP_REPLAY_CACHE_MAX_ENTRIES": "1000",
+            }
+        )
+        self.assertEqual(settings.apps_file, "secrets/apps.json")
+        self.assertEqual(settings.assertion_audience, "shared-mcp-dev")
+        self.assertEqual((settings.assertion_max_lifetime_seconds, settings.clock_skew_seconds), (30, 2))
+        self.assertEqual(settings.replay_cache_max_entries, 1000)
+        self.assertIsNone(load_settings({"MCP_APPS_FILE": "  "}).apps_file)
+
+    def test_approved_security_limits_enforced(self) -> None:
+        cases = {
+            "MCP_ASSERTION_MAX_LIFETIME_SECONDS": ["61", "300", "0"],
+            "MCP_CLOCK_SKEW_SECONDS": ["6", "30", "-1"],
+            "MCP_ASSERTION_AUDIENCE": ["", "has space", "a" * 129],
+            "MCP_REPLAY_CACHE_MAX_ENTRIES": ["10", "5000000"],
+        }
+        for name, values in cases.items():
+            for value in values:
+                with self.subTest(name=name, value=value), self.assertRaises(ConfigError):
+                    load_settings({name: value})
 
     def test_env_overrides(self) -> None:
         settings = load_settings(

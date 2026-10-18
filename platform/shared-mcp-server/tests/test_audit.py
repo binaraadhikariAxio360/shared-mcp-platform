@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import unittest
 
-from shared_mcp_server.audit import REDACTED, audit_event, redact
+from shared_mcp_server.audit import REDACTED, arg_keys, audit_event, redact
 
 JWT = "eyJhbGciOiJFZERTQSJ9.eyJzdWIiOiJ1c3ItMSIsInRpZCI6InRlbmFudC0wMDEifQ.c2lnbmF0dXJlLXZhbHVl"
 SESSION = "pcsess.dXNyLTE.MTcwMDAwMDAwMA.abcdef0123456789"
@@ -41,6 +41,25 @@ class RedactionTests(unittest.TestCase):
         for secret in (JWT, SESSION, "appr-0123456789abcdef", "BEGIN PRIVATE KEY"):
             self.assertNotIn(secret, serialized)
         self.assertTrue(record["detail"].startswith("upstream said "))
+
+    def test_service_tokens_and_emails_masked(self) -> None:
+        token = "mcpsvc_" + "A1b2_" * 8 + "xyz"
+        record = redact({"detail": f"sent {token}", "user": "dr.jane.doe@clinic.example.org", "note": "ok"})
+        serialized = json.dumps(record)
+        self.assertNotIn(token, serialized)
+        self.assertNotIn("jane.doe", serialized)
+        self.assertEqual(record["note"], "ok")
+
+    def test_token_id_is_kept_but_its_value_still_scanned(self) -> None:
+        self.assertEqual(redact({"token_id": "practicare-svc-1"}), {"token_id": "practicare-svc-1"})
+        self.assertEqual(redact({"token_id": "mcpsvc_abcdef"}), {"token_id": REDACTED})
+        self.assertEqual(redact({"client_token": "x"}), {"client_token": REDACTED})
+
+    def test_arg_keys_names_only(self) -> None:
+        self.assertEqual(arg_keys({"limit": 5, "message": "secret"}), ["limit", "message"])
+        self.assertEqual(arg_keys(None), [])
+        self.assertEqual(len(arg_keys({f"k{i}": i for i in range(100)})), 32)
+        self.assertEqual(arg_keys({"x" * 200: 1}), ["x" * 64])
 
     def test_safe_values_unchanged(self) -> None:
         values = {"tool": "practicare_list_tasks", "tenant": "tenant-001", "latency_ms": 12.5, "ok": True, "n": None}

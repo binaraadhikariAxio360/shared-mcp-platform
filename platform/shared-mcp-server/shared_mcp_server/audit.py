@@ -26,9 +26,14 @@ SENSITIVE_VALUE = re.compile(
     r"|eyJ[A-Za-z0-9_-]{5,}\.[A-Za-z0-9_-]{5,}\.[A-Za-z0-9_-]*"  # JWT
     r"|pcsess\.\S+"  # PractiCare session token
     r"|appr-[A-Za-z0-9_-]{8,}"  # PractiCare approval token
+    r"|mcpsvc_[A-Za-z0-9_-]+"  # shared MCP service token
+    r"|[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}"  # email address
     r"|-----BEGIN [A-Z ]*PRIVATE KEY-----)",
     re.IGNORECASE,
 )
+# Identifiers of credentials (never the credentials themselves); their values are still scanned.
+SAFE_KEYS = frozenset({"token_id"})
+MAX_ARG_KEYS = 32
 
 _logger = logging.getLogger("shared_mcp_server.audit")
 
@@ -38,7 +43,9 @@ def redact(value: Any, _depth: int = 0) -> Any:
         return "[TRUNCATED]"
     if isinstance(value, Mapping):
         return {
-            str(key): REDACTED if SENSITIVE_KEY.search(str(key)) else redact(item, _depth + 1)
+            str(key): REDACTED
+            if str(key) not in SAFE_KEYS and SENSITIVE_KEY.search(str(key))
+            else redact(item, _depth + 1)
             for key, item in value.items()
         }
     if isinstance(value, (list, tuple, set, frozenset)):
@@ -49,6 +56,13 @@ def redact(value: Any, _depth: int = 0) -> Any:
     if value is None or isinstance(value, (bool, int, float)):
         return value
     return redact(str(value), _depth + 1)
+
+
+def arg_keys(arguments: Any) -> list[str]:
+    """Top-level argument names only (never values), bounded for the audit log."""
+    if not isinstance(arguments, Mapping):
+        return []
+    return sorted(str(key)[:64] for key in arguments)[:MAX_ARG_KEYS]
 
 
 def audit_event(event: str, **fields: Any) -> dict[str, Any]:

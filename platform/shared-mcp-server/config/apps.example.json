@@ -1,0 +1,22 @@
+{
+  "apps": [
+    {
+      "app_id": "practicare",
+      "display_name": "PractiCare",
+      "client_tokens": [
+        {
+          "token_id": "practicare-svc-YYYYMM",
+          "sha256": "<64 lowercase hex: SHA-256 of the mcpsvc_ service token; never the token itself>",
+          "not_before": "2026-01-01T00:00:00Z",
+          "not_after": "2026-06-30T00:00:00Z"
+        }
+      ],
+      "assertion_keys": [
+        {
+          "kid": "practicare-assert-YYYYMM",
+          "public_key_pem": "<Ed25519 PUBLIC key in PEM (SubjectPublicKeyInfo); private keys are refused>"
+        }
+      ]
+    }
+  ]
+}

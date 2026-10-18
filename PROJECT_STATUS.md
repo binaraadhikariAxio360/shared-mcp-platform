@@ -3,6 +3,20 @@
 **Last Updated**: 2026-10-18  
 **Current Status**: Inventory AI round 1 and Inventory Stabilization round 2 **deployed to the local MOC** (round 2: 2026-10-18 ~13:41 IST) and verified automatically | **Live manual verification per role pending**
 
+## 00000000. 2026-10-18 — Shared MCP Step 3: security IMPLEMENTED (dev repo only; not committed, not deployed)
+- Location `D:\Axio360\shared-mcp-development`, branch `feature/shared-mcp-step2`, all code in `platform/shared-mcp-server/`. Design approved with 7 decisions; record in `docs/SHARED_MCP_STEP3_SECURITY_DESIGN.md` §10.
+- Implemented: `ServiceAuthMiddleware` (hashed, expiring `mcpsvc_` service tokens on every request under the MCP mount → 401); Ed25519 user assertions verified only in `tools/list` / `tools/call` (`iss` bound to the authenticated app, `aud`, `act`, `tool`, `cid`, lifetime ≤ 60 s, skew ≤ 5 s, `alg` EdDSA only); in-memory single-use `jti` cache (fails closed; **single worker only, shared store required before multi-worker**); deny-by-default `visible_tools()` for discovery and calls (Auditor excluded, hidden = `NOT_FOUND`); manifests must forbid additional/identity properties; structured errors with correlation ids; redacted audit (`mcpsvc_`, emails; argument names only). Server moved to the SDK's low-level `Server` (Step 2 behaviour unchanged). `MCP_APPS_FILE` loader (hashes + public keys only, placeholder example, real file in git-ignored `secrets/`). No business tools, no PractiCare client, no LangGraph, no Docker; `apps/**` untouched.
+- New finding C11: the SDK client's `call_tool` sends a hidden `tools/list`, so the Step 6 client must mint an assertion per HTTP request (proven with the official client in tests).
+- Tests: shared server **135/135** (92 new), stable over 3 runs; PractiCare regression **182/182** (throwaway `--rm --network none` container from the backend image, repo read-only; no host interpreter has pytest/backend deps, and the suites are unittest-based); frontend `tsc --noEmit` exit 0; entry-point smoke test OK (0.0.0.0 refused, bad apps file refused, default = 0 apps / all `/mcp` 401). Running MOC containers and DB untouched.
+- Git: nothing committed (policy: explicit approval before every Git write).
+- Next step: user review → commit on approval → Step 4 (PractiCare internal API: assertion re-verification, DB reload, cross-tenant tests).
+
+## 0000000. 2026-10-18 — Shared MCP Step 3: security design (approved; implemented in entry above)
+- Design: `docs/SHARED_MCP_STEP3_SECURITY_DESIGN.md` (untracked; not committed per Git policy: no commit/push/remote/merge without explicit approval).
+- Content: Hop A service token (`mcpsvc_`, hashed, mandatory expiry), per-operation Ed25519 user assertion (`iss`=authenticated app, `aud`, `act`, `tool`, `cid`, `jti`, ≤60 s), in-memory replay cache that fails closed, deny-by-default discovery and calls (Auditor excluded, hidden = `NOT_FOUND`), structured errors, redacted audit, 30-row test matrix, file plan; 10 plan conflicts resolved (C1–C10); 7 decisions requested.
+- Checks: design claims re-verified read-only against the SDK 2.3.0 source, the server venv, PractiCare `ai/registry.py`, `ai/context.py`, `ai/gateway.py`, `main.py` and `.gitignore` (log in §9 of the doc). No code, test, config, Docker or DB change; no tests run (nothing changed).
+- Next step: user review of §8 decisions → Step 3 implementation after approval.
+
 ## 000000. 2026-10-18 — Shared MCP Step 2: server foundation (dev repo only, not deployed)
 - Location `D:\Axio360\shared-mcp-development`, branch `feature/shared-mcp-step2`; all code in `platform/shared-mcp-server/` (see its README). Not pushed, not deployed, no Docker service.
 - SDK verified: no `mcp` package existed in the shared `.venv` or the backend images; installed `mcp==2.3.0` (+ `mcp-types 2.3.0`, latest on PyPI) into a git-ignored venv `platform/shared-mcp-server/.venv` (Python 3.12.10). SDK 2.3.0 handshake versions: 2024-11-05, 2025-03-26, 2025-06-18, 2025-11-25; separate stateless era 2026-07-28.
